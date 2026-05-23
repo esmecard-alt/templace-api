@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./templates_storage:/app/templates_storage
+      - ./app:/app/app
+    environment:
+      - ENV=development
+    restart: unless-stopped
