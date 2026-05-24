@@ -12,6 +12,7 @@ class GenerateRequest(BaseModel):
     data: dict[str, Any]
     output_format: OutputFormat = OutputFormat.docx
     filename: Optional[str] = None
+    strict_mode: bool = True
 
 class GenerateResponse(BaseModel):
     filename: str

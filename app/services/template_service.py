@@ -11,6 +11,8 @@ from app.core.exceptions import (
     InvalidTemplateException
 )
 
+SUSPICIOUS_PATTERN = re.compile(r'^[a-z]$|^loop_|^ns\d+')
+
 class TemplateService:
 
     def __init__(self):
@@ -23,11 +25,18 @@ class TemplateService:
             raise TemplateNotFoundException(template_id)
         return matches[0]
 
-    def _extract_markers(self, path: Path) -> list[str]:
+    def _extract_markers(self, path: Path) -> dict:
         try:
             doc = DocxTemplate(path)
             variables = doc.get_undeclared_template_variables()
-            return sorted(list(variables))
+            valid = []
+            suspicious = []
+            for v in sorted(variables):
+                if SUSPICIOUS_PATTERN.match(v):
+                    suspicious.append(v)
+                else:
+                    valid.append(v)
+            return {"valid": valid, "suspicious": suspicious}
         except Exception as e:
             raise InvalidTemplateException(str(e))
 
@@ -49,11 +58,21 @@ class TemplateService:
         markers = self._extract_markers(dest_path)
         size_kb = round(len(content) / 1024, 2)
 
+        warnings = []
+        if markers["suspicious"]:
+            warnings.append(
+                f"Se detectaron {len(markers['suspicious'])} marcador(es) sospechoso(s) "
+                f"que podrían ser errores en la plantilla: {', '.join(markers['suspicious'])}. "
+                f"Revisa que todos los marcadores sean correctos antes de generar documentos."
+            )
+
         return {
             "template_id": template_id,
             "filename": filename,
             "size_kb": size_kb,
-            "markers_detected": markers,
+            "markers_detected": markers["valid"],
+            "markers_suspicious": markers["suspicious"],
+            "warnings": warnings,
             "uploaded_at": datetime.utcnow()
         }
 
@@ -62,10 +81,20 @@ class TemplateService:
         markers = self._extract_markers(path)
         size_kb = round(path.stat().st_size / 1024, 2)
 
+        warnings = []
+        if markers["suspicious"]:
+            warnings.append(
+                f"Se detectaron {len(markers['suspicious'])} marcador(es) sospechoso(s): "
+                f"{', '.join(markers['suspicious'])}. "
+                f"Revisa la plantilla antes de generar documentos."
+            )
+
         return {
             "template_id": template_id,
             "filename": "_".join(path.name.split("_")[1:]),
-            "markers": markers,
+            "markers": markers["valid"],
+            "markers_suspicious": markers["suspicious"],
+            "warnings": warnings,
             "size_kb": size_kb
         }
 
@@ -83,12 +112,13 @@ class TemplateService:
                 try:
                     markers = self._extract_markers(path)
                 except Exception:
-                    markers = []
+                    markers = {"valid": [], "suspicious": []}
                 templates.append({
                     "template_id": template_id,
                     "filename": parts[1],
                     "size_kb": round(path.stat().st_size / 1024, 2),
-                    "markers": markers
+                    "markers": markers["valid"],
+                    "markers_suspicious": markers["suspicious"]
                 })
         return templates
 

@@ -13,7 +13,8 @@ async def generate_document(request: GenerateRequest):
         template_id=request.template_id,
         data=request.data,
         output_format=request.output_format,
-        filename=request.filename
+        filename=request.filename,
+        strict_mode=request.strict_mode
     )
 
     if request.output_format == OutputFormat.base64:

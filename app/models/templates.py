@@ -7,10 +7,14 @@ class TemplateUploadResponse(BaseModel):
     filename: str
     size_kb: float
     markers_detected: list[str]
+    markers_suspicious: list[str]
+    warnings: list[str]
     uploaded_at: datetime
 
 class TemplatePreviewResponse(BaseModel):
     template_id: str
     filename: str
     markers: list[str]
+    markers_suspicious: list[str]
+    warnings: list[str]
     size_kb: float
